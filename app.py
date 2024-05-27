@@ -11,6 +11,7 @@ def load_secrets():
             return secrets.get("API_KEY")
     except FileNotFoundError:
         st.error("Please make sure the 'secrets.toml' file exists and contains the 'API_KEY'.")
+        return None
 
 def main():
     st.set_page_config(page_title="RAG Chatbot", page_icon="🤖", layout="wide")
@@ -71,7 +72,11 @@ def display_chatbot_page():
         """)
 
         with st.form("settings"):
-            token = st.text_input("Hugging Face Token (No need to insert)", type='password', value="******")
+            api_key = load_secrets()
+            if api_key:
+                token = st.text_input("Hugging Face Token (No need to insert)", type='password', value="******")
+            else:
+                token = st.text_input("Hugging Face Token (No need to insert)", type='password')
             llm_model = st.text_input("LLM Model", value="tiiuae/falcon-7b-instruct")
             instruct_embeddings = st.text_input("Instruct Embeddings", value="sentence-transformers/all-MiniLM-L6-v2")
             vector_store_list = os.listdir("vector store")
@@ -82,7 +87,6 @@ def display_chatbot_page():
             create_chatbot = st.form_submit_button("Initialize Chatbot")
 
     if create_chatbot:
-        api_key = load_secrets()
         if api_key:
             st.session_state.conversation = prepare_rag_llm(api_key, existing_vector_store, temperature, max_length)
             st.success("Chatbot initialized successfully!")
