@@ -2,10 +2,15 @@ import os
 import streamlit as st
 from document_processing import read_pdf, read_txt, split_doc, embedding_storing
 from chatbot import prepare_rag_llm, generate_answer
-from dotenv import load_dotenv
+import toml
 
-# Load environment variables from .env file
-load_dotenv()
+def load_secrets():
+    try:
+        with open("secrets.toml", "r") as file:
+            secrets = toml.load(file)
+            return secrets.get("API_KEY")
+    except FileNotFoundError:
+        st.error("Please make sure the 'secrets.toml' file exists and contains the 'API_KEY'.")
 
 def main():
     st.set_page_config(page_title="RAG Chatbot", page_icon="🤖", layout="wide")
@@ -66,7 +71,7 @@ def display_chatbot_page():
         """)
 
         with st.form("settings"):
-            token = st.text_input("Hugging Face Token (No need to insert)", type='password', value=f"{'*' * len(os.getenv('API_KEY'))}")
+            token = st.text_input("Hugging Face Token (No need to insert)", type='password', value="******")
             llm_model = st.text_input("LLM Model", value="tiiuae/falcon-7b-instruct")
             instruct_embeddings = st.text_input("Instruct Embeddings", value="sentence-transformers/all-MiniLM-L6-v2")
             vector_store_list = os.listdir("vector store")
@@ -77,8 +82,12 @@ def display_chatbot_page():
             create_chatbot = st.form_submit_button("Initialize Chatbot")
 
     if create_chatbot:
-        st.session_state.conversation = prepare_rag_llm(os.getenv('API_KEY'), existing_vector_store, temperature, max_length)
-        st.success("Chatbot initialized successfully!")
+        api_key = load_secrets()
+        if api_key:
+            st.session_state.conversation = prepare_rag_llm(api_key, existing_vector_store, temperature, max_length)
+            st.success("Chatbot initialized successfully!")
+        else:
+            st.error("Failed to load API_KEY from secrets.toml. Please make sure the 'secrets.toml' file exists and contains the 'API_KEY'.")
 
     st.markdown("### Chat with the Bot")
     st.markdown("Enter your text below to get a response from the chatbot. **NOTE:** Initialize the LLM Model above before using the chatbot.")
@@ -90,7 +99,7 @@ def display_chatbot_page():
 
         if submit_button and user_input:
             with st.spinner("Generating response..."):
-                answer, doc_source = generate_answer(user_input, os.getenv('API_KEY'))
+                answer, doc_source = generate_answer(user_input, api_key)
 
             st.markdown(f"**You:** {user_input}")
             st.markdown(f"**Chatbot:** {answer}")
