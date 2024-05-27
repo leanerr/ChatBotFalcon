@@ -2,16 +2,14 @@ import os
 import streamlit as st
 from document_processing import read_pdf, read_txt, split_doc, embedding_storing
 from chatbot import prepare_rag_llm, generate_answer
-import toml
 
 def load_secrets():
     try:
-        with open("secrets.toml", "r") as file:
-            secrets = toml.load(file)
-            return secrets.get("API_KEY")
-    except FileNotFoundError:
-        st.error("Please make sure the 'secrets.toml' file exists and contains the 'API_KEY'.")
+        api_key = st.secrets["API_KEY"]
+    except KeyError:
+        st.error("Please make sure the 'API_KEY' is set in Streamlit secrets.")
         return None
+    return api_key
 
 def main():
     st.set_page_config(page_title="RAG Chatbot", page_icon="🤖", layout="wide")
@@ -91,7 +89,7 @@ def display_chatbot_page():
             st.session_state.conversation = prepare_rag_llm(api_key, existing_vector_store, temperature, max_length)
             st.success("Chatbot initialized successfully!")
         else:
-            st.error("Failed to load API_KEY from secrets.toml. Please make sure the 'secrets.toml' file exists and contains the 'API_KEY'.")
+            st.error("Failed to load API_KEY from Streamlit secrets. Please make sure it is set.")
 
     st.markdown("### Chat with the Bot")
     st.markdown("Enter your text below to get a response from the chatbot. **NOTE:** Initialize the LLM Model above before using the chatbot.")
